@@ -10,13 +10,13 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest  # Для Linux runners GitHub Actions
+    runs-on: ubuntu-latest  # Используем Ubuntu, так как GitHub Actions работает на нем для Linux
 
     steps:
     - name: Checkout code
       uses: actions/checkout@v2
 
-    # Debugging: Выводим содержимое репозитория, чтобы убедиться, что файлы правильно загружаются
+    # Проверка содержимого репозитория для отладки
     - name: List files in workspace
       run: ls -la
 
@@ -40,16 +40,22 @@ jobs:
     - name: Build with Maven
       run: mvn clean install -B
 
-    # Проверка версии Maven для отладки
+    # Проверка версии Maven
     - name: Check Maven version
       run: mvn -v
 
-    # Деплой WAR файла на Azure (для Linux App Service)
+    # Деплой на Azure с использованием Azure CLI
     - name: Deploy WAR to Azure
       run: |
-        az webapp deploy --resource-group <ResourceGroup> --name <AppName> --src-path target/your-app.war --type war
+        # Убедитесь, что Azure CLI настроен в вашем окружении
+        az webapp deploy --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} --name ${{ secrets.AZURE_APP_NAME }} --src-path target/*.war --type war
       env:
         AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
         AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
         AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
         AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+
+    # Проверка деплоя
+    - name: Verify deployment status
+      run: |
+        az webapp show --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} --name ${{ secrets.AZURE_APP_NAME }}
