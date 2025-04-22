@@ -10,21 +10,24 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
-    
+    runs-on: ubuntu-latest  # Для Linux runners GitHub Actions
+
     steps:
-    # Checkout the repository
     - name: Checkout code
       uses: actions/checkout@v2
 
-    # Set up Java 17
+    # Debugging: Выводим содержимое репозитория, чтобы убедиться, что файлы правильно загружаются
+    - name: List files in workspace
+      run: ls -la
+
+    # Настройка Java 17
     - name: Set up JDK 17
       uses: actions/setup-java@v2
       with:
         java-version: '17'
         distribution: 'adoptopenjdk'
 
-    # Cache Maven dependencies
+    # Кэширование зависимостей Maven
     - name: Cache Maven dependencies
       uses: actions/cache@v2
       with:
@@ -33,10 +36,20 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-maven-
 
-    # Run Maven build
+    # Сборка с Maven
     - name: Build with Maven
-      run: mvn clean install
+      run: mvn clean install -B
 
-    # Deploy the WAR to Azure (using Maven plugin or any script)
-    - name: Deploy to Azure
-      run: mvn azure-webapp:deploy
+    # Проверка версии Maven для отладки
+    - name: Check Maven version
+      run: mvn -v
+
+    # Деплой WAR файла на Azure (для Linux App Service)
+    - name: Deploy WAR to Azure
+      run: |
+        az webapp deploy --resource-group <ResourceGroup> --name <AppName> --src-path target/your-app.war --type war
+      env:
+        AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+        AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+        AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+        AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
