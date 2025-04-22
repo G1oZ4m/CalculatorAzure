@@ -3,10 +3,10 @@ name: Java CI with Maven
 on:
   push:
     branches:
-      - master  # Указываем ветку "master", а не "main"
+      - master  # Указываем ветку "master"
   pull_request:
     branches:
-      - master  # Указываем ветку "master", а не "main"
+      - master  # Указываем ветку "master"
 
 jobs:
   build:
@@ -26,7 +26,7 @@ jobs:
         distribution: 'adoptopenjdk'
 
     - name: Cache Maven dependencies
-      uses: actions/cache@v2
+      uses: actions/cache@v3  # Обновленная версия
       with:
         path: ~/.m2/repository
         key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
