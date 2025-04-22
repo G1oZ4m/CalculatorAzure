@@ -23,10 +23,10 @@ jobs:
       uses: actions/setup-java@v2
       with:
         java-version: '17'
-        distribution: 'adoptopenjdk'
+        distribution: 'temurin'  # Используем temurin для OpenJDK
 
     - name: Cache Maven dependencies
-      uses: actions/cache@v3  # Обновленная версия
+      uses: actions/cache@v3
       with:
         path: ~/.m2/repository
         key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
