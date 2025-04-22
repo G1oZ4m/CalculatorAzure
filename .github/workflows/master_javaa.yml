@@ -1,47 +1,49 @@
-name: Build and Deploy WAR to Azure
+name: Java CI with Maven
 
 on:
   push:
-    branches:
-      - main
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
 
 jobs:
   build:
     runs-on: windows-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+    - uses: actions/checkout@v3
 
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
-        with:
-          java-version: '17'
-          distribution: 'temurin'
+    - name: Set up JDK 17
+      uses: actions/setup-java@v3
+      with:
+        java-version: '17'
+        distribution: 'temurin'
 
-      - name: Build with Maven
-        run: mvn clean package --file pom.xml
+    - name: Build with Maven
+      run: mvn clean package
 
-      - name: Upload WAR Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: java-artifact
-          path: target/*.war
+    - name: Upload artifact for deployment
+      uses: actions/upload-artifact@v3
+      with:
+        name: java-app
+        path: target/*.jar
 
   deploy:
     runs-on: windows-latest
     needs: build
+    environment:
+      name: 'production'
+      url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
 
     steps:
-      - name: Download artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: java-artifact
+    - name: Download artifact from build job
+      uses: actions/download-artifact@v3
+      with:
+        name: java-app
 
-      - name: Deploy to Azure Web App
-        uses: azure/webapps-deploy@v2
-        with:
-          app-name: <your-app-name>  # e.g. my-calculator-azure
-          slot-name: production
-          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
-          package: '*.war'
+    - name: Deploy to Azure Web App
+      uses: azure/webapps-deploy@v2
+      with:
+        app-name: <your-app-name>           # 👈 замени на имя своего App Service в Azure
+        publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+        package: '*.jar'
