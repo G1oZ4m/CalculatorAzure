@@ -1,30 +1,51 @@
-name: Deploy to Azure Web App
+trigger:
+- main  # Запуск пайплайна при пуше в ветку main
 
-on:
-  push:
-    branches:
-      - main  # Триггер для деплоя на основную ветку
+pool:
+  vmImage: 'ubuntu-latest'  # Используем последнюю версию Ubuntu для CI/CD
+
+variables:
+  appName: 'JavaAA'  # Название приложения в Azure
+  resourceGroup: 'JavaAA_group'  # Группа ресурсов в Azure
+  azureSubscription: 'Azure for Students'  # Твоя подписка в Azure
+  javaVersion: '11'  # Версия Java
+  tomcatVersion: '9'  # Версия Tomcat (можно выбрать 9 или 10 в зависимости от нужд)
+  packagePath: 'target/*.war'  # Путь к WAR файлу после сборки
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
+- job: BuildAndDeploy
+  displayName: 'Build and Deploy to Azure'
+  steps:
+  - task: UseJavaToolInstaller@1
+    inputs:
+      versionSpec: '$(javaVersion)'  # Устанавливаем нужную версию Java
+      addToPath: true
 
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
+  - task: Maven@3
+    displayName: 'Build with Maven'
+    inputs:
+      mavenPomFile: 'pom.xml'
+      goals: 'clean package'
+      options: '-DskipTests=true'  # Можно настроить на выполнение тестов, если нужно
+      javaHomeOption: 'JDKVersion'
+      jdkVersionOption: '1.11'  # Указываем версию Java
+      jdkArchitectureOption: 'x64'
+      mavenVersionOption: 'Default'  # Используем стандартную версию Maven
+      mavenAuthenticateFeed: false
 
-      - name: Set up JDK
-        uses: actions/setup-java@v2
-        with:
-          java-version: '17'
+  - task: AzureWebApp@1
+    displayName: 'Deploy WAR to Azure Web App'
+    inputs:
+      azureSubscription: '$(azureSubscription)'
+      appName: '$(appName)'  # Название твоего Azure App Service
+      resourceGroupName: '$(resourceGroup)'  # Имя группы ресурсов
+      package: '$(packagePath)'  # Путь к WAR файлу
 
-      - name: Build with Maven
-        run: mvn clean install
-
-      - name: Deploy to Azure Web App
-        uses: azure/webapps-deploy@v2
-        with:
-          app-name: 'your-app-name'  # Название твоего приложения в Azure
-          slot-name: 'production'  # Если используешь слоты
-          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
-          package: 'target/your-app-name.war'  # Путь к .war файлу
+  - task: AzureCLI@2
+    displayName: 'Restart Azure Web App'
+    inputs:
+      azureSubscription: '$(azureSubscription)'
+      scriptType: 'bash'
+      scriptLocation: 'inlineScript'
+      inlineScript: |
+        az webapp restart --name $(appName) --resource-group $(resourceGroup)  # Перезапуск приложения после деплоя
