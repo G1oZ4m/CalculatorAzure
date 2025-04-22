@@ -3,30 +3,28 @@ name: Java CI with Maven
 on:
   push:
     branches:
-      - main
+      - master  # Указываем ветку "master", а не "main"
   pull_request:
     branches:
-      - main
+      - master  # Указываем ветку "master", а не "main"
 
 jobs:
   build:
-    runs-on: ubuntu-latest  # Используем Ubuntu для деплоя на Linux
+    runs-on: ubuntu-latest
 
     steps:
     - name: Checkout code
       uses: actions/checkout@v2
 
     - name: List files in workspace
-      run: ls -la  # Проверим структуру файлов, чтобы точно увидеть, что есть в репозитории
+      run: ls -la
 
-    # Настройка Java 17
     - name: Set up JDK 17
       uses: actions/setup-java@v2
       with:
         java-version: '17'
         distribution: 'adoptopenjdk'
 
-    # Кэширование зависимостей Maven
     - name: Cache Maven dependencies
       uses: actions/cache@v2
       with:
@@ -35,21 +33,14 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-maven-
 
-    # Сборка с Maven
     - name: Build with Maven
-      run: mvn clean install -B  # Собираем проект, WAR файл появится в target/
+      run: mvn clean install -B
 
-    - name: Check Maven version
-      run: mvn -v  # Проверка версии Maven
-
-    # Проверка файлов в target (чтобы убедиться, что WAR собран)
     - name: List files in target directory
       run: ls -la target/
 
-    # Деплой на Azure с использованием Azure CLI
     - name: Deploy WAR to Azure
       run: |
-        # Деплой WAR на Azure
         az webapp deploy --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} --name ${{ secrets.AZURE_APP_NAME }} --src-path target/*.war --type war
       env:
         AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
@@ -57,7 +48,6 @@ jobs:
         AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
         AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
 
-    # Проверка статуса деплоя на Azure
     - name: Verify deployment status
       run: |
         az webapp show --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} --name ${{ secrets.AZURE_APP_NAME }}
