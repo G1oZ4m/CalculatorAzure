@@ -1,51 +1,40 @@
-trigger:
-- main  # Запуск пайплайна при пуше в ветку main
+name: Java Maven CI/CD
 
-pool:
-  vmImage: 'ubuntu-latest'  # Используем последнюю версию Ubuntu для CI/CD
-
-variables:
-  appName: 'JavaAA'  # Название приложения в Azure
-  resourceGroup: 'JavaAA_group'  # Группа ресурсов в Azure
-  azureSubscription: 'Azure for Students'  # Твоя подписка в Azure
-  javaVersion: '11'  # Версия Java
-  tomcatVersion: '9'  # Версия Tomcat (можно выбрать 9 или 10 в зависимости от нужд)
-  packagePath: 'target/*.war'  # Путь к WAR файлу после сборки
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
 
 jobs:
-- job: BuildAndDeploy
-  displayName: 'Build and Deploy to Azure'
-  steps:
-  - task: UseJavaToolInstaller@1
-    inputs:
-      versionSpec: '$(javaVersion)'  # Устанавливаем нужную версию Java
-      addToPath: true
+  build:
+    runs-on: ubuntu-latest   # Вы можете использовать 'windows-latest', если вам удобнее
 
-  - task: Maven@3
-    displayName: 'Build with Maven'
-    inputs:
-      mavenPomFile: 'pom.xml'
-      goals: 'clean package'
-      options: '-DskipTests=true'  # Можно настроить на выполнение тестов, если нужно
-      javaHomeOption: 'JDKVersion'
-      jdkVersionOption: '1.11'  # Указываем версию Java
-      jdkArchitectureOption: 'x64'
-      mavenVersionOption: 'Default'  # Используем стандартную версию Maven
-      mavenAuthenticateFeed: false
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
 
-  - task: AzureWebApp@1
-    displayName: 'Deploy WAR to Azure Web App'
-    inputs:
-      azureSubscription: '$(azureSubscription)'
-      appName: '$(appName)'  # Название твоего Azure App Service
-      resourceGroupName: '$(resourceGroup)'  # Имя группы ресурсов
-      package: '$(packagePath)'  # Путь к WAR файлу
+    - name: Set up JDK 17
+      uses: actions/setup-java@v3
+      with:
+        java-version: '17'  # Установка JDK 17
 
-  - task: AzureCLI@2
-    displayName: 'Restart Azure Web App'
-    inputs:
-      azureSubscription: '$(azureSubscription)'
-      scriptType: 'bash'
-      scriptLocation: 'inlineScript'
-      inlineScript: |
-        az webapp restart --name $(appName) --resource-group $(resourceGroup)  # Перезапуск приложения после деплоя
+    - name: Cache Maven dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.m2/repository
+        key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+        restore-keys: |
+          ${{ runner.os }}-maven-
+
+    - name: Build with Maven
+      run: mvn clean install -DskipTests  # Строим проект и пропускаем тесты
+
+    - name: Deploy to Azure Web App
+      uses: Azure/webapps-deploy@v2
+      with:
+        app-name: 'YourAppName'  # Название вашего приложения на Azure
+        publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}  # Публикационный профиль, который хранится в секретах
+        package: 'target/your-app-name.war'  # Путь к WAR файлу, который будет задеплоен
