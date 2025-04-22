@@ -10,7 +10,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest   # Вы можете использовать 'windows-latest', если вам удобнее
+    runs-on: ubuntu-latest   # You can also use 'windows-latest' if preferred
 
     steps:
     - name: Checkout code
@@ -19,7 +19,7 @@ jobs:
     - name: Set up JDK 17
       uses: actions/setup-java@v3
       with:
-        java-version: '17'  # Установка JDK 17
+        java-version: '17'  # Setup JDK 17
 
     - name: Cache Maven dependencies
       uses: actions/cache@v3
@@ -30,11 +30,11 @@ jobs:
           ${{ runner.os }}-maven-
 
     - name: Build with Maven
-      run: mvn clean install -DskipTests  # Строим проект и пропускаем тесты
+      run: mvn clean install -DskipTests  # Build project and skip tests
 
     - name: Deploy to Azure Web App
       uses: Azure/webapps-deploy@v2
       with:
-        app-name: 'YourAppName'  # Название вашего приложения на Azure
-        publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}  # Публикационный профиль, который хранится в секретах
-        package: 'target/your-app-name.war'  # Путь к WAR файлу, который будет задеплоен
+        app-name: 'YourAppName'  # Replace with your Azure app name
+        publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}  # Use your publish profile secret
+        package: 'target/your-app-name.war'  # Path to the WAR file
