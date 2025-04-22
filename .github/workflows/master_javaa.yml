@@ -3,57 +3,51 @@ name: Java CI with Maven
 on:
   push:
     branches:
-      - master  # Указываем ветку "master"
+      - master
   pull_request:
     branches:
-      - master  # Указываем ветку "master"
+      - master
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v2
+      - name: Checkout code
+        uses: actions/checkout@v2
 
-    - name: List files in workspace
-      run: ls -la
+      - name: Set up JDK 17
+        uses: actions/setup-java@v2
+        with:
+          distribution: 'temurin'
+          java-version: '17'
 
-    - name: Set up JDK 17
-      uses: actions/setup-java@v2
-      with:
-        java-version: '17'
-        distribution: 'temurin'  # Используем temurin для OpenJDK
+      - name: Cache Maven packages
+        uses: actions/cache@v3
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
 
-    - name: Cache Maven dependencies
-      uses: actions/cache@v3
-      with:
-        path: ~/.m2/repository
-        key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
-        restore-keys: |
-          ${{ runner.os }}-maven-
+      - name: Build with Maven
+        run: mvn clean package -B
 
-    - name: Build with Maven
-      run: mvn clean install -B
+      - name: List .war file in target
+        run: ls -l target/*.war
 
-    - name: List files in target directory
-      run: ls -la target/
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          allow-no-subscriptions: false
 
-    - name: Check variables before deploy
-      run: |
-        echo "Resource Group: ${{ secrets.AZURE_RESOURCE_GROUP }}"
-        echo "App Name: ${{ secrets.AZURE_APP_NAME }}"
-        echo "Subscription ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}"
-
-    - name: Deploy WAR to Azure
-      run: |
-        az webapp deploy --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} --name ${{ secrets.AZURE_APP_NAME }} --src-path target/*.war --type war
-      env:
-        AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-        AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-        AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-        AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
-
-    - name: Verify deployment status
-      run: |
-        az webapp show --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} --name ${{ secrets.AZURE_APP_NAME }}
+      - name: Deploy to Azure Web App
+        run: |
+          az webapp deploy \
+            --resource-group "${{ secrets.AZURE_RESOURCE_GROUP }}" \
+            --name "${{ secrets.AZURE_APP_NAME }}" \
+            --src-path target/*.war \
+            --type war
