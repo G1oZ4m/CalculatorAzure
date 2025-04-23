@@ -42,7 +42,7 @@ jobs:
       - name: Deploy to Azure Web App
         run: |
           az webapp deploy \
-            --resource-group <zxcDev> \
-            --name <zxcWeb> \
+            --resource-group zxcDev \
+            --name zxcWeb \
             --src-path target/my-web-app-1.0.war \
             --type war
