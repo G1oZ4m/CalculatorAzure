@@ -1,4 +1,7 @@
-name: Build and Deploy WAR to Azure Web App
+# Docs for the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
+# More GitHub Actions for Azure: https://github.com/Azure/actions
+
+name: Build and deploy WAR app to Azure Web App - zxcWeb
 
 on:
   push:
@@ -8,41 +11,56 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
+    permissions:
+      contents: read #This is required for actions/checkout
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
+      - uses: actions/checkout@v4
 
-      - name: Set up JDK 17
-        uses: actions/setup-java@v2
+      - name: Set up Java version
+        uses: actions/setup-java@v4
         with:
-          distribution: 'temurin'
           java-version: '17'
-
-      - name: Cache Maven dependencies
-        uses: actions/cache@v3
-        with:
-          path: ~/.m2/repository
-          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
-          restore-keys: |
-            ${{ runner.os }}-maven-
+          distribution: 'microsoft'
 
       - name: Build with Maven
-        run: mvn clean install -B  # Собираем проект, генерируем WAR файл
+        run: mvn clean install
 
-      - name: List target directory
-        run: ls -l target/  # Проверяем наличие .war файла
+      - name: Upload artifact for deployment job
+        uses: actions/upload-artifact@v4
+        with:
+          name: java-app
+          path: '${{ github.workspace }}/target/*.war'
 
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     needs: build
+    environment:
+      name: 'Production'
+      url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
+    permissions:
+      id-token: write #This is required for requesting the JWT
+      contents: read #This is required for actions/checkout
 
     steps:
+      - name: Download artifact from build job
+        uses: actions/download-artifact@v4
+        with:
+          name: java-app
+      
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_797540CC16C34381BC7CA252B7A08E8C }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_F22930A93D5F41D499A557633F7B09DD }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_9EF046E47E4444BE8D05D50C568E8E1A }}
+
       - name: Deploy to Azure Web App
-        run: |
-          az webapp deploy \
-            --resource-group zxcDev \
-            --name zxcWeb \
-            --src-path target/my-web-app-1.0.war \
-            --type war
+        id: deploy-to-webapp
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: 'zxcWeb'
+          slot-name: 'Production'
+          package: '*.war'
+          
