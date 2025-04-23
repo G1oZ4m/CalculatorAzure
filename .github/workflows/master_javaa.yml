@@ -36,18 +36,10 @@ jobs:
       - name: List .war file in target
         run: ls -l target/*.war
 
-      - name: Azure Login
-        uses: azure/login@v1
+      - name: Deploy WAR to Azure Web App
+        uses: azure/webapps-deploy@v2
         with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          allow-no-subscriptions: false
-
-      - name: Deploy to Azure Web App
-        run: |
-          az webapp deploy \
-            --resource-group "${{ secrets.AZURE_RESOURCE_GROUP }}" \
-            --name "${{ secrets.AZURE_APP_NAME }}" \
-            --src-path target/*.war \
-            --type war
+          app-name: ${{ secrets.AZURE_APP_NAME }}
+          slot-name: 'production'  # ili drugi slot ako koristiš staging
+          publish-profile: ${{ secrets.AZURE_PUBLISH_PROFILE }}
+          package: target/*.war
